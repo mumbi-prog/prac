@@ -1,108 +1,91 @@
-const title = document.getElementById("title")
-const poster = document.getElementById("poster")
-const runtime = document.getElementById("runtime")
-const showtime = document.getElementById("showtime")
-const tickets = document.getElementById("tickets")
-const ticketsRemaining = document.getElementById("available-tickets")
-const availableButton = document.getElementById("available") 
-const rem = document.getElementById("remaining-tickets")
+// Define constants for API endpoint and DOM elements
+const FILM_API_ENDPOINT = "http://localhost:3000/films";
+const filmListElement = document.getElementById("films");
+const previewImageElement = document.getElementById("poster");
+const movieTitleElement = document.getElementById("title");
+const movieTimeElement = document.getElementById("time");
+const movieDescriptionElement = document.getElementById("film-info");
+const showTimeElement = document.getElementById("showtime");
+const movieTicketsAvailableElement = document.getElementById("ticket-num");
+const buyTicketButton = document.getElementById("buy-ticket");
 
+// Wait for DOM to load before fetching data
+document.addEventListener("DOMContentLoaded", () => {
+  // Remove first placeholder film item from the list
+  const firstFilmItem = document.getElementsByClassName("film item")[0];
+  firstFilmItem.remove();
+  
+  // Fetch movies from server
+  fetchMovies(FILM_API_ENDPOINT);
+});
 
-document.addEventListener("DOMContentLoaded",() => {
-    fetch("http://localhost:3000/films")
-    .then((response) => response.json())
-    .then(data => {
-        console.log(data) 
-        menuMovieDetails(data) 
+// Fetches movies from server
+function fetchMovies(endpoint) {
+  fetch(endpoint)
+    .then(response => response.json())
+    .then(movies => {
+      // Display each movie in the list
+      movies.forEach(movie => displayMovie(movie));
+      // Add click event listener to each movie item
+      addClickEventListenerToMovies();
     })
-})
-
-let movieDetails = document.getElementById("movie-menu") 
-let details = document.getElementById("movie-details") 
-
-
-//display all menu movie details 
-function menuMovieDetails(data){
-    data.forEach(movie => {
-        /*  movieDetails.innerHTML += `
-        <ul data-id = ${movie.id} id="films"> 
-            <li id= "film-item" > <a id= "tag" >${movie.title}</a> </li>
-        </ul>
-           `
- */
-          let ul = document.createElement("ul")
-          let li = document.createElement("li")
-          ul.setAttribute("data-id", movie.id)
-          li.innerText = movie.title
-
-          ul.appendChild(li) 
-          movieDetails.appendChild(ul)
-
-          li.addEventListener("click", () => {
-             // console.log("click")
-            // movieDetails.innerHTML = ""
-             title.innerText = movie.title
-                poster.setAttribute("src",movie.poster)
-                runtime.innerText = "Show Runtime: " + movie.runtime
-                showtime.innerText = "Showtime: " + movie.showtime
-          })
-    }); 
-
-    
-   
-}
- 
-
-//display only first movie details
-function dataId(id){
-    fetch(`http://localhost:3000/films/${id}`) 
-    .then((response) => response.json())
-    .then(data => {
-       // console.log(data)
-        firstMovieDetails(data) 
-        availableTickets(data)
-    })
-}
-dataId(1) 
-
-
-
-function firstMovieDetails(data){
-    title.innerText = data.title
-    poster.setAttribute("src",data.poster)
-    runtime.innerText = "Show Runtime: " + data.runtime
-    showtime.innerText = "Showtime: " + data.showtime
-
-    let ticketsAvailable = data.capacity - data.tickets_sold
-   // console.log(ticketsAvailable)
-
-    tickets.innerHTML = "Tickets Available are: " + ticketsAvailable
+    .catch(error => console.log(`Error fetching movies: ${error}`));
 }
 
-
-//available tickets functionality
-function availableTickets(data){
-    ticketsRemaining.addEventListener("click",(event) => {
-        event.preventDefault()
-        let available = data.capacity - data.tickets_sold
-           
-        if(available > 0){
-            rem.innerHTML = `Available tickets are: ${available} `
-        } else {
-            rem.innerHTML = "Sold out!" 
-        }
-
-        availableButton.appendChild(rem) 
-    })
-
-
+// Displays a movie item in the list
+function displayMovie(movie) {
+  const movieItem = document.createElement("li");
+  movieItem.style.cursor = "pointer";
+  movieItem.textContent = movie.title.toUpperCase();
+  filmListElement.appendChild(movieItem);
 }
-availableTickets() 
 
+// Adds click event listener to each movie item in the list
+function addClickEventListenerToMovies() {
+  const movieItems = document.querySelectorAll("#films > li");
+  movieItems.forEach((movieItem, index) => {
+    movieItem.addEventListener("click", () => {
+      const movieEndpoint = `${FILM_API_ENDPOINT}/${index + 1}`;
+      // Fetch movie details from server and display them
+      fetch(movieEndpoint)
+        .then(response => response.json())
+        .then(movie => {
+          displayMovieDetails(movie);
+          setAvailableTicketsCount(movie);
+        })
+        .catch(error => console.log(`Error fetching movie details: ${error}`));
+    });
+  });
+}
 
+// Displays the details of the selected movie
+function displayMovieDetails(movie) {
+  previewImageElement.src = movie.poster;
+  movieTitleElement.textContent = movie.title;
+  movieTimeElement.textContent = `${movie.runtime} minutes`;
+  movieDescriptionElement.textContent = movie.description;
+  showTimeElement.textContent = movie.showtime;
+}
 
+// Sets the available tickets count for the selected movie
+function setAvailableTicketsCount(movie) {
+  const availableTicketsCount = movie.capacity - movie.tickets_sold;
+  movieTicketsAvailableElement.textContent = availableTicketsCount;
+  if (availableTicketsCount === 0) {
+    buyTicketButton.textContent = "Sold Out";
+  } else {
+    buyTicketButton.textContent = "Buy Ticket";
+  }
+}
 
-// Click on a movie in the menu to replace the currently displayed movie's details with the new movie's details
-/* function clickedMovieMenu(data){
-    console.log(data)
-} */
+// Adds click event listener to buy ticket button
+buyTicketButton.addEventListener("click", event => {
+    event.preventDefault();
+    let remainingTicketsCount = parseInt(movieTicketsAvailableElement.textContent);
+    if (remainingTicketsCount > 0) {
+      remainingTicketsCount--;
+      movieTicketsAvailableElement.textContent = remainingTicketsCount;
+    } else {
+      buyTicketButton.textContent = "Sold Out";
+    }
+  });
